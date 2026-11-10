@@ -1,0 +1,29 @@
+# local application inventory. Each file is one Argo CD Application pointing at an
+# environment overlay (environments/local/overlays/<app>) or at argocd-install.
+# Waves: argocd -10, external-secrets -5, cert-manager + envoy-gateway + cloudnative-pg 0, issuers/external-dns/gateway 1,
+# podinfo + headlamp + app-a + app-b 10; the apps that need Key Vault secrets (external-secrets-config, oauth2-proxy) come last (5)
+# so a vault that is not wired up yet never blocks the ingress path.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+
+resources:
+  - argocd.yaml
+  - external-secrets.yaml
+  - external-secrets-config.yaml
+  - cert-manager.yaml
+  - cert-manager-issuers.yaml
+  - external-dns.yaml
+  - envoy-gateway.yaml
+  - cloudnative-pg.yaml
+  - gateway.yaml
+  - oauth2-proxy.yaml
+  - podinfo.yaml
+  - headlamp.yaml
+  - app-a.yaml
+  - app-b.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: local

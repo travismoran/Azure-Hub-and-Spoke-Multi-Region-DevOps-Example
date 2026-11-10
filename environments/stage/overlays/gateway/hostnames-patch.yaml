@@ -1,0 +1,7 @@
+# stage: the Gateway serves *.stage.azure.example.com.
+- op: replace
+  path: /spec/listeners/0/hostname
+  value: "*.stage.azure.example.com"
+- op: replace
+  path: /spec/listeners/1/hostname
+  value: "*.stage.azure.example.com"

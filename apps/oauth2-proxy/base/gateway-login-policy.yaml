@@ -1,0 +1,35 @@
+# Gateway-wide login: every HTTPRoute on the platform Gateway is checked by oauth2-proxy
+# (Google, example.com accounts only) unless a route carries its own SecurityPolicy.
+# Enable only once the Google OAuth client is in the environment's Key Vault:
+# with failOpen=false and oauth2-proxy unable to start, every frontend would return errors.
+# Enable by adding this file to apps/oauth2-proxy/base/kustomization.yaml resources.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: google-login
+  namespace: gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: platform
+  extAuth:
+    failOpen: false
+    headersToExtAuth:
+      - cookie
+      - authorization
+      - accept
+      - user-agent
+      - x-forwarded-for
+      - x-forwarded-proto
+      - x-forwarded-host
+      - x-auth-request-redirect   # set by the Gateway's ClientTrafficPolicy: the URL to return to after login
+    http:
+      backendRefs:
+        - name: oauth2-proxy
+          port: 80
+      headersToBackend:
+        - x-auth-request-user
+        - x-auth-request-email
+        - x-auth-request-preferred-username
+        - authorization

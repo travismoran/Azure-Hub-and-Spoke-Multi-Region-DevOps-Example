@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: podinfo
+          env:
+            - name: PODINFO_UI_MESSAGE
+              value: "gitops-example / dev"

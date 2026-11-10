@@ -1,0 +1,23 @@
+# Where to send the user after Google: oauth2-proxy only trusts X-Forwarded-Host when it differs
+# from Host (it does not here, Envoy forwards the original Host to ext-auth), so it would store a
+# relative path and resolve it against its own host. X-Auth-Request-Redirect is its next lookup:
+# set it to the full original URL. Early header mutation runs before the ext-auth filter and
+# OVERWRITES the header, so a client cannot inject its own; oauth2-proxy also validates it against
+# --whitelist-domain.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: platform
+  namespace: gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: platform
+  headers:
+    earlyRequestHeaders:
+      set:
+        - name: X-Forwarded-Host
+          value: "%REQ(:authority)%"
+        - name: X-Auth-Request-Redirect
+          value: "https://%REQ(:authority)%%REQ(:path)%"

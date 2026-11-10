@@ -1,0 +1,18 @@
+# Blueprint: Headlamp, the Kubernetes web UI (kubernetes-sigs). Published on the platform Gateway
+# behind the Google login that oauth2-proxy enforces for every route; see values.yaml for how
+# Headlamp authenticates to the API server. Hostname patched per environment.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - httproute.yaml
+  - networkpolicy.yaml
+
+helmCharts:
+  - name: headlamp
+    repo: https://kubernetes-sigs.github.io/headlamp/
+    version: 0.46.0
+    releaseName: headlamp
+    namespace: headlamp
+    valuesFile: values.yaml

@@ -1,0 +1,19 @@
+# App A authenticates its users itself (Google ID-token sign-in verified server-side, signed
+# session cookie, every query scoped by user), so it opts out of the Gateway-wide oauth2-proxy
+# login: a route-level SecurityPolicy replaces the Gateway-level one for this route entirely.
+# Stacking both logins broke the app's sign-in (Google's cross-site callback POST carries no
+# SameSite=Lax session cookie -> 302 -> GET -> 405). Without the Gateway restricting reach to
+# example.com accounts, the app's ALLOWED_EMAILS (overlay) is the access list.
+# Unauthenticated surface: /signin, /privacy, the Google callback, /api/v1/health, static assets.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: app-a-own-login
+  namespace: app-a
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: app-a
+  authorization:
+    defaultAction: Allow

@@ -1,0 +1,13 @@
+# Base Helm values for Envoy Gateway (the Gateway API controller). The chart also ships the
+# Gateway API CRDs (v1.6.1, experimental channel), which replace any CRDs a previous ingress left behind.
+deployment:
+  replicas: 1
+config:
+  envoyGateway:
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    provider:
+      type: Kubernetes
+    logging:
+      level:
+        default: info

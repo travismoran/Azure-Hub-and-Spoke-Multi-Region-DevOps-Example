@@ -1,0 +1,8 @@
+# Blueprint: Let's Encrypt ClusterIssuers using DNS-01 on Azure DNS.
+# The base is written for Azure workload identity. Overlays set the zone, resource group and
+# identity client ID; the local overlay swaps workload identity for a service principal secret.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - clusterissuers.yaml

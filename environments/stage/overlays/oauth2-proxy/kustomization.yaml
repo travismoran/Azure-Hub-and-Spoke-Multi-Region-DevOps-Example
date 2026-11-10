@@ -1,0 +1,22 @@
+# stage: Google login (example.com) in front of every route on the platform Gateway.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gateway
+
+resources:
+  - ../../../../apps/oauth2-proxy/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: stage
+
+patches:
+  - path: args-patch.yaml
+    target:
+      kind: Deployment
+      name: oauth2-proxy
+  - path: httproute-patch.yaml
+    target:
+      kind: HTTPRoute
+      name: oauth2-proxy

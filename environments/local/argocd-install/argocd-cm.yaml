@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  url: https://argocd.local.azure.example.com
+  # Environment label surfaced in the UI and usable in RBAC / notifications.
+  application.instanceLabelKey: argocd.argoproj.io/instance
+  # The local admin account stays enabled until Google SSO works (bootstrap logs in with
+  # argocd-initial-admin-secret). Once SSO is verified, set "false" and delete that secret. To recover
+  # from a broken SSO later, set "true" again and `kubectl -n argocd patch secret argocd-secret` with
+  # a bcrypt hash (the initial admin secret is NOT recreated).
+  admin.enabled: "true"
+  # Google SSO through Dex, restricted to the example.com Workspace. The OAuth client comes from
+  # Key Vault via the ExternalSecret argocd-google-oauth (apps/external-secrets-config).
+  dex.config: |
+    connectors:
+      - type: google
+        id: google
+        name: Google
+        config:
+          clientID: $argocd-google-oauth:clientID
+          clientSecret: $argocd-google-oauth:clientSecret
+          redirectURI: https://argocd.local.azure.example.com/api/dex/callback
+          hostedDomains:
+            - example.com

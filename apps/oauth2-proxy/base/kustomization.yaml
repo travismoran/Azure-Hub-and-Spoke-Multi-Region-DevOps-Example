@@ -1,0 +1,19 @@
+# Blueprint: oauth2-proxy as the platform Gateway's external authorizer (Google Workspace login).
+# Lives in the gateway namespace so the SecurityPolicy can target the Gateway directly.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gateway
+
+resources:
+  - externalsecret.yaml
+  - httproute.yaml
+  - securitypolicy.yaml
+  - gateway-login-policy.yaml
+
+helmCharts:
+  - name: oauth2-proxy
+    repo: https://oauth2-proxy.github.io/manifests
+    version: 10.7.2
+    releaseName: oauth2-proxy
+    namespace: gateway
+    valuesFile: values.yaml

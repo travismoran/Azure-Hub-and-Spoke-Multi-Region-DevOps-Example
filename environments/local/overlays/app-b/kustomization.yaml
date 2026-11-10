@@ -1,0 +1,46 @@
+# local overlay for the App B blueprint: hostname, allow-list, the JWKS the ingestion
+# API trusts, and the images from the environment's registry crdemolocal.azurecr.io
+# (infra repo live/dev/local/local-cluster).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: app-b
+
+resources:
+  - ../../../../apps/app-b/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: local
+
+images:
+  # Deploying a build = bumping these to the sha-<short> the app-b ci run published.
+  - name: example.azurecr.io/app-b/api
+    newName: crdemolocal.azurecr.io/app-b/api
+    newTag: sha-0000000
+  - name: example.azurecr.io/app-b/reporting
+    newName: crdemolocal.azurecr.io/app-b/reporting
+    newTag: sha-0000000
+
+patches:
+  - path: hostname-patch.yaml
+    target:
+      kind: HTTPRoute
+      name: app-b-api
+  - path: hostname-patch.yaml
+    target:
+      kind: HTTPRoute
+      name: app-b
+  - path: hostname-patch.yaml
+    target:
+      kind: HTTPRoute
+      name: app-b-webhook
+  - path: allowlist-patch.yaml
+    target:
+      kind: SecurityPolicy
+      name: app-b-allowlist
+  - path: jwks-patch.yaml
+  - path: reporting-env-patch.yaml
+    target:
+      kind: Deployment
+      name: app-b-reporting

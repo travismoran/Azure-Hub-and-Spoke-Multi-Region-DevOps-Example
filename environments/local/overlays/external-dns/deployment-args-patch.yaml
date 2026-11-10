@@ -1,0 +1,19 @@
+# Only manage records inside this environment's zone, and own them as "local".
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --domain-filter=local.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --txt-owner-id=local
+# Rancher Desktop: the Traefik LoadBalancer IP (192.168.127.x) lives on the VM's internal network
+# and is unreachable from Windows or the LAN. Rancher Desktop's host-switch forwards ports 80/443
+# on every Windows interface into Traefik, so publish the Windows host's LAN address instead.
+# It is a DHCP lease today; give it a reservation on the router, or update this value if it moves.
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --default-targets=192.168.1.100
+# Ingresses already carry the Traefik LB IP in their status; without this flag external-dns
+# (>= 0.15) keeps the source's own targets and only logs a warning.
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --force-default-targets

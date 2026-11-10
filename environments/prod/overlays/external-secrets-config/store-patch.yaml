@@ -1,0 +1,17 @@
+# prod: the environment's Key Vault (kv-demo-prod, AKS workload identity).
+- op: replace
+  path: /spec/provider/azurekv/tenantId
+  value: REPLACE_WITH_TENANT_ID
+- op: replace
+  path: /spec/provider/azurekv/vaultUrl
+  value: https://kv-demo-prod.vault.azure.net
+- op: replace
+  path: /spec/provider/azurekv/authType
+  value: WorkloadIdentity
+- op: remove
+  path: /spec/provider/azurekv/authSecretRef
+- op: add
+  path: /spec/provider/azurekv/serviceAccountRef
+  value:
+    name: external-secrets
+    namespace: external-secrets

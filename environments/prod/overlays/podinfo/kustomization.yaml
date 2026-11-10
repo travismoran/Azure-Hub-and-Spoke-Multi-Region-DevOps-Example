@@ -1,0 +1,19 @@
+# prod overlay for the podinfo blueprint.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: podinfo
+
+resources:
+  - ../../../../apps/podinfo/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: prod
+
+patches:
+  - path: deployment-patch.yaml
+  - path: httproute-patch.yaml
+    target:
+      kind: HTTPRoute
+      name: podinfo

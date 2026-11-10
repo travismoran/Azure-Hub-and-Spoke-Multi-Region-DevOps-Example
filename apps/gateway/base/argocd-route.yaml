@@ -1,0 +1,19 @@
+# Argo CD UI/API. Lives here rather than in argocd-install because that kustomization is applied by
+# scripts/bootstrap.sh before the Gateway API CRDs exist. argocd-server runs with server.insecure,
+# so TLS terminates at the Gateway. Hostname patched per environment.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  parentRefs:
+    - name: platform
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - argocd.example.com
+  rules:
+    - backendRefs:
+        - name: argocd-server
+          port: 80

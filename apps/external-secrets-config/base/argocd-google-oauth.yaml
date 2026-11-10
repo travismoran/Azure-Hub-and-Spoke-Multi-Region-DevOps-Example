@@ -1,0 +1,26 @@
+# Google OAuth client for Argo CD's Dex connector (argocd-cm dex.config references
+# $argocd-google-oauth:clientID / :clientSecret; the part-of label is what lets Argo CD read it).
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: argocd-google-oauth
+  namespace: argocd
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: azure-kv
+  target:
+    name: argocd-google-oauth
+    creationPolicy: Owner
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/part-of: argocd
+  data:
+    - secretKey: clientID
+      remoteRef:
+        key: google-oauth-client-id
+    - secretKey: clientSecret
+      remoteRef:
+        key: google-oauth-client-secret

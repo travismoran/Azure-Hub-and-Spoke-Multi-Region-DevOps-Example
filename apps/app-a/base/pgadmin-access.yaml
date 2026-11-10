@@ -1,0 +1,90 @@
+# Who reaches pgAdmin. Hostname and the allowed account are patched per environment.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: pgadmin
+  namespace: app-a
+spec:
+  parentRefs:
+    - name: platform
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - pgadmin.example.com
+  rules:
+    - backendRefs:
+        - name: pgadmin
+          port: 80
+---
+# Layered on the Gateway-wide login, not instead of it: mergeType merges this policy into the
+# Gateway's (apps/oauth2-proxy/base/gateway-login-policy.yaml), so oauth2-proxy still
+# authenticates every request and sets X-Auth-Request-Email; this authorization then admits only
+# the listed accounts. Everyone else who passes the Google login gets 403 here.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: pgadmin-allowlist
+  namespace: app-a
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: pgadmin
+  mergeType: StrategicMerge
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: allowed-accounts
+        action: Allow
+        principal:
+          headers:
+            - name: x-auth-request-email
+              values:
+                - admin@example.com   # patched per environment
+---
+# In: only the Envoy proxy pods of the platform Gateway (the header pgAdmin trusts can only come
+# from there). Out: DNS and the app-a-db instances; nothing else.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pgadmin
+  namespace: app-a
+spec:
+  podSelector:
+    matchLabels:
+      app: pgadmin
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: envoy-gateway-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: proxy
+              app.kubernetes.io/managed-by: envoy-gateway
+      ports:
+        - protocol: TCP
+          port: 5050
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: app-a-db
+      ports:
+        - protocol: TCP
+          port: 5432

@@ -1,0 +1,26 @@
+# Base Helm values for cert-manager. Keep environment-specific tuning in the env overlay.
+crds:
+  enabled: true
+  keep: true
+global:
+  leaderElection:
+    namespace: cert-manager
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+webhook:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+cainjector:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+# DNS-01 self-check through public resolvers, not the cluster's. Rancher Desktop's host resolver
+# answers TXT lookups with a CNAME to the same name ("Found recursive CNAME record"), and split-
+# horizon resolvers on AKS can hide public records; Let's Encrypt validates from the internet anyway.
+dns01RecursiveNameservers: "1.1.1.1:53,8.8.8.8:53"
+dns01RecursiveNameserversOnly: true

@@ -1,0 +1,15 @@
+# Base Argo CD installation. Environment overlays in
+# environments/<env>/argocd-install layer their config on top of this.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+
+resources:
+  - namespace.yaml
+  # Upstream install manifests, pinned. Bump the tag here to upgrade every environment.
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.1/manifests/install.yaml
+  - projects.yaml
+
+patches:
+  - path: argocd-cm.yaml
+  - path: argocd-rbac-cm.yaml

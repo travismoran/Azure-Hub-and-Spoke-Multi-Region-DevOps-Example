@@ -1,0 +1,127 @@
+# Reporting API (/v1/reports/*, read-only) and the dashboard SPA it serves from /. Reads the same
+# database; has no login of its own, the Gateway login + allow-list in access.yaml is the access
+# control.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-b-reporting
+  namespace: app-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-b-reporting
+  template:
+    metadata:
+      labels:
+        app: app-b-reporting
+    spec:
+      imagePullSecrets:
+        - name: acr-pull   # externalsecret-acr.yaml
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001   # "app-b" in the image
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: reporting
+          image: example.azurecr.io/app-b/reporting   # registry + tag patched per environment
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            # Reporting auth: requests count as authenticated only when they arrive from a
+            # trusted proxy address AND carry X-Auth-Request-Email set by oauth2-proxy. Both
+            # TRUSTED_PROXY_CIDRS and ADMIN_EMAILS are environment-specific and patched per overlay;
+            # empty means every /v1 route answers 401.
+            - name: TRUSTED_PROXY_CIDRS
+              value: ""
+            - name: ADMIN_EMAILS
+              value: ""
+            - name: AGGREGATE_REFRESH_SECONDS
+              value: "300"
+            - name: RETENTION_SENSITIVE_DAYS
+              value: "30"
+            - name: RETENTION_INTERNAL_DAYS
+              value: "365"
+            # Optional integrations. Everything is off until the owner creates the two
+            # Secrets below; optional refs keep the pod starting without them (analyst disabled,
+            # approvals recorded without opening PRs, webhook answers 503).
+            - name: PUBLIC_BASE_URL
+              value: ""
+            - name: ANALYST_SCHEDULE
+              value: ""
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-b-reporting-anthropic
+                  key: ANTHROPIC_API_KEY
+                  optional: true
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-b-reporting-github
+                  key: GITHUB_APP_ID
+                  optional: true
+            - name: GITHUB_APP_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-b-reporting-github
+                  key: GITHUB_APP_INSTALLATION_ID
+                  optional: true
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-b-reporting-github
+                  key: GITHUB_APP_PRIVATE_KEY
+                  optional: true
+            - name: GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-b-reporting-github
+                  key: GITHUB_WEBHOOK_SECRET
+                  optional: true
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-b-db-app
+                  key: uri
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-b-reporting
+  namespace: app-b
+spec:
+  selector:
+    app: app-b-reporting
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -1,0 +1,41 @@
+# Headlamp chart values shared by every environment.
+#
+# Authentication model: the Gateway's oauth2-proxy policy is the only login.
+# Everyone who passes Google (example.com) acts as Headlamp's own service account, which the
+# chart binds to cluster-admin. The API server therefore sees "headlamp", not the person. This keeps
+# the API server untouched (no OIDC flags, nothing to configure on Rancher Desktop or AKS). Switch
+# to per-user identity later by setting unsafeUseServiceAccountToken=false and config.oidc.* against
+# an issuer the API server trusts (Entra ID on AKS).
+config:
+  inCluster: true
+  unsafeUseServiceAccountToken: true
+  oidc:
+    secret:
+      create: false
+
+clusterRoleBinding:
+  create: true
+  clusterRoleName: cluster-admin
+
+# Routing is the HTTPRoute next to this file, not the chart's.
+ingress:
+  enabled: false
+httpRoute:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+# The chart probes / with no initial delay and a 1s timeout; the backend needs a few seconds to
+# come up, which showed as one "connection refused" readiness failure per start.
+probes:
+  readinessProbe:
+    initialDelaySeconds: 5
+    timeoutSeconds: 3
+  livenessProbe:
+    initialDelaySeconds: 15
+    timeoutSeconds: 3

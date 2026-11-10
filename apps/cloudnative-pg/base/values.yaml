@@ -1,0 +1,12 @@
+# Base Helm values for the CloudNativePG operator. One replica (the operator is not in the data
+# path; Postgres keeps serving if it restarts). The chart's defaults already run it non-root with a
+# read-only filesystem and no capabilities.
+replicaCount: 1
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+monitoring:
+  podMonitorEnabled: false   # no Prometheus operator on the local cluster

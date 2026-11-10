@@ -1,0 +1,4 @@
+- op: replace
+  path: /spec/authorization/rules/0/principal/headers/0/values
+  value:
+    - admin@example.com

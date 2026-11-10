@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-a
+  namespace: app-a
+spec:
+  template:
+    spec:
+      containers:
+        - name: app-a
+          env:
+            - name: PUBLIC_ORIGIN
+              value: https://app-a.local.azure.example.com
+            - name: ALLOWED_EMAILS
+              value: admin@example.com

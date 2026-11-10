@@ -1,0 +1,17 @@
+# Local cluster: no workload identity, so authenticate as the Terraform-managed service principal
+# sp-dns-local (infra repo live/platform/dns-principals). Its secret reaches
+# cert-manager/azuredns-sp from Key Vault through the ExternalSecret in this overlay; the client id
+# below is the infra output client_ids["local"].
+- op: replace
+  path: /spec/acme/solvers/0/dns01/azureDNS/hostedZoneName
+  value: local.azure.example.com
+- op: remove
+  path: /spec/acme/solvers/0/dns01/azureDNS/managedIdentity
+- op: add
+  path: /spec/acme/solvers/0/dns01/azureDNS/clientID
+  value: REPLACE_WITH_CLIENT_ID_OF_sp-dns-local   # sp-dns-local client id (infra output client_ids)
+- op: add
+  path: /spec/acme/solvers/0/dns01/azureDNS/clientSecretSecretRef
+  value:
+    name: azuredns-sp
+    key: client-secret

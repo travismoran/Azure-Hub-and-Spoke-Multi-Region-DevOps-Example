@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: podinfo
+  template:
+    metadata:
+      labels:
+        app: podinfo
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        # podinfo's image declares a named user; kubelet needs a numeric UID to verify non-root.
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo
+          # The image sets only CMD, so args alone would replace the binary.
+          command: ["./podinfo"]
+          args:
+            - --port=9898
+            - --level=info
+          ports:
+            - name: http
+              containerPort: 9898
+          env:
+            - name: PODINFO_UI_MESSAGE
+              value: "gitops-example"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

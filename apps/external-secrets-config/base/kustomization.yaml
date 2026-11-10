@@ -1,0 +1,8 @@
+# Blueprint: the cluster's secret store wiring. ExternalSecrets for a component live next to the
+# component (apps/<name>); this app holds what has no better home.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - cluster-secret-store.yaml
+  - argocd-google-oauth.yaml

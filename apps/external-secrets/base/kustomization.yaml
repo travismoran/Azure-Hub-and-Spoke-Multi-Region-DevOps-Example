@@ -1,0 +1,19 @@
+# Blueprint: External Secrets Operator (ESO). Syncs Azure Key Vault secrets into Kubernetes Secrets;
+# the only secret ever created by hand on a cluster is the one ESO uses to reach the vault
+# (external-secrets/azure-kv-sp, see scripts/bootstrap-external-secrets.sh and docs/secrets.md).
+# ESO CRDs are large: the Application must sync with ServerSideApply=true.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: external-secrets
+
+resources:
+  - namespace.yaml
+
+helmCharts:
+  - name: external-secrets
+    repo: https://charts.external-secrets.io
+    version: 2.14.0
+    releaseName: external-secrets
+    namespace: external-secrets
+    valuesFile: values.yaml
+    includeCRDs: true

@@ -1,0 +1,10 @@
+# local: one session cookie for every host under local.azure.example.com; Google redirects back to auth.local.azure.example.com.
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --cookie-domain=.local.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --whitelist-domain=.local.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --redirect-url=https://auth.local.azure.example.com/oauth2/callback

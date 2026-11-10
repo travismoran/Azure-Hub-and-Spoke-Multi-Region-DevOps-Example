@@ -1,0 +1,23 @@
+# dev application inventory. Each file is one Argo CD Application pointing at an
+# environment overlay (environments/dev/overlays/<app>) or at argocd-install.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+
+resources:
+  - argocd.yaml
+  - external-secrets.yaml
+  - external-secrets-config.yaml
+  - cert-manager.yaml
+  - cert-manager-issuers.yaml
+  - external-dns.yaml
+  - envoy-gateway.yaml
+  - gateway.yaml
+  - oauth2-proxy.yaml
+  - podinfo.yaml
+  - headlamp.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: dev

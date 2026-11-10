@@ -1,0 +1,7 @@
+# dev: the Gateway serves *.dev.azure.example.com.
+- op: replace
+  path: /spec/listeners/0/hostname
+  value: "*.dev.azure.example.com"
+- op: replace
+  path: /spec/listeners/1/hostname
+  value: "*.dev.azure.example.com"

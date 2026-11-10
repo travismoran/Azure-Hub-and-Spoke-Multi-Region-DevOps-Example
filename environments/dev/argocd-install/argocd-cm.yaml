@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  url: https://argocd.dev.azure.example.com
+  # Environment label surfaced in the UI and usable in RBAC / notifications.
+  application.instanceLabelKey: argocd.argoproj.io/instance
+  # Google SSO through Dex, restricted to the example.com Workspace. The OAuth client comes from
+  # Key Vault via the ExternalSecret argocd-google-oauth (apps/external-secrets-config).
+  dex.config: |
+    connectors:
+      - type: google
+        id: google
+        name: Google
+        config:
+          clientID: $argocd-google-oauth:clientID
+          clientSecret: $argocd-google-oauth:clientSecret
+          redirectURI: https://argocd.dev.azure.example.com/api/dex/callback
+          hostedDomains:
+            - example.com

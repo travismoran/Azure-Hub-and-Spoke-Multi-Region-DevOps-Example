@@ -1,0 +1,67 @@
+# App B' database: a CloudNativePG-managed PostgreSQL 17 cluster in the app's namespace. The
+# operator creates the database and owner on first start and writes the app credentials to the
+# Secret app-b-db-app (keys uri, username, password, dbname, host, port); both services read
+# DATABASE_URL from it, so no database password exists outside the cluster. The ingestion API
+# applies the schema (api/schema.sql, idempotent) on start. One instance on the local cluster;
+# environments raise instances/storage and add backups in their overlay.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: app-b-db
+  namespace: app-b
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.6
+  primaryUpdateStrategy: unsupervised
+  bootstrap:
+    initdb:
+      database: app-b
+      owner: app-b
+  storage:
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  postgresql:
+    parameters:
+      max_connections: "50"
+      shared_buffers: 64MB
+---
+# Only the two services may open connections; the operator (cnpg-system) reaches the instance
+# manager.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-b-db
+  namespace: app-b
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: app-b-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: app-b-api
+        - podSelector:
+            matchLabels:
+              app: app-b-reporting
+      ports:
+        - protocol: TCP
+          port: 5432
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - protocol: TCP
+          port: 8000
+    - from:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: app-b-db

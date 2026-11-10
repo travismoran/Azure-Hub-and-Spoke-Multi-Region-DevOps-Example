@@ -1,0 +1,28 @@
+# Secret scanning on every push/PR plus a weekly full-history sweep.
+# Uses gitleaks-action (license required for org-owned repos: secrets.GITLEAKS_LICENSE).
+name: gitleaks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write   # PR comments on findings
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # scan full history, not just the checkout
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_SUMMARY: "true"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"

@@ -1,0 +1,5 @@
+- op: replace
+  path: /spec/dnsNames
+  value:
+    - "*.stage.azure.example.com"
+    - stage.azure.example.com

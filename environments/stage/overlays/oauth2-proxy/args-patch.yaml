@@ -1,0 +1,10 @@
+# stage: one session cookie for every host under stage.azure.example.com; Google redirects back to auth.stage.azure.example.com.
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --cookie-domain=.stage.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --whitelist-domain=.stage.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --redirect-url=https://auth.stage.azure.example.com/oauth2/callback

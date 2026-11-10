@@ -1,0 +1,27 @@
+# stage: ExternalDNS scoped to the stage.azure.example.com zone.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: external-dns
+
+resources:
+  - ../../../../apps/external-dns/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: stage
+
+patches:
+  - path: deployment-args-patch.yaml
+    target:
+      kind: Deployment
+      name: external-dns
+  - path: workload-identity-patch.yaml
+
+# azure.json without secrets: the pod authenticates with its federated service account token.
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+  - name: azure-config-file
+    files:
+      - azure.json

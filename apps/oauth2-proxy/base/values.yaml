@@ -1,0 +1,58 @@
+# Base Helm values for oauth2-proxy acting as the Gateway's external authorizer (SecurityPolicy
+# extAuth). Unauthenticated requests get a 302 to Google; authenticated ones get 200 from the
+# static upstream and the request continues to the real backend with X-Auth-Request-* headers.
+config:
+  existingSecret: oauth2-proxy   # keys client-id, client-secret, cookie-secret (from Key Vault via ESO)
+  configFile: |
+    provider = "google"
+    email_domains = [ "example.com" ]
+    upstreams = [ "static://200" ]   # Envoy ext-auth accepts ONLY 200 as "allowed" (nginx/Istio take any 2xx)
+    reverse_proxy = true
+    set_xauthrequest = true
+    skip_provider_button = true
+    cookie_secure = true
+    cookie_samesite = "lax"
+    cookie_refresh = "1h"
+    cookie_expire = "12h"
+    # As an ext-auth backend every unauthenticated request (page, favicon, assets) starts its own
+    # login; one shared CSRF cookie gets overwritten by the later ones and the callback fails with
+    # "Unable to find a valid CSRF token". Per-request CSRF cookies keep each round-trip's token.
+    cookie_csrf_per_request = true
+    # ... but each one is a cookie on the shared parent domain, and a page left open with an
+    # expired session polls its API every few seconds, minting one per poll. Firefox sends every
+    # cookie as its own HTTP/2 header; past ~95 Envoy resets the stream (http2.too_many_headers,
+    # default max_headers_count 100) for every host under the domain. Two guards:
+    # 1. api_routes: background XHR paths get a 401 instead of a login start (no CSRF cookie).
+    #    A document request to the same host still gets the 302 and signs the user back in.
+    #    ^/api/ = podinfo and Argo CD; ^/clusters/ = the Headlamp API proxy. pgAdmin's dashboard
+    #    already sends Accept: application/json, which oauth2-proxy treats the same way.
+    # 2. A 5m CSRF lifetime (was 15m): long enough for a Google sign-in with 2FA, a third of
+    #    the live cookies for anything that still slips through.
+    api_routes = [ "^/api/", "^/clusters/" ]
+    cookie_csrf_expire = "5m"
+    silence_ping_logging = true
+# Environment-specific flags (cookie/whitelist domain, redirect URL) are added by the env overlay.
+extraArgs: {}
+replicaCount: 1
+service:
+  type: ClusterIP
+  portNumber: 80
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  enabled: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 2000
+  runAsGroup: 2000
+  capabilities:
+    drop: ["ALL"]
+  seccompProfile:
+    type: RuntimeDefault

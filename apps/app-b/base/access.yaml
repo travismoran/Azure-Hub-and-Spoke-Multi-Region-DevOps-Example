@@ -1,0 +1,149 @@
+# One hostname, two routes (hostnames patched per environment). The longer path match wins, so
+# /v1/telemetry/* and /v1/otel/* reach the ingestion API and everything else the dashboard.
+# /v1/otel is an OTLP/HTTP receiver an OpenTelemetry exporter posts to
+# (it appends /v1/metrics and /v1/logs itself); it carries the same bearer token as /v1/telemetry.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app-b-api
+  namespace: app-b
+spec:
+  parentRefs:
+    - name: platform
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - app-b.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1/telemetry
+        - path:
+            type: PathPrefix
+            value: /v1/otel
+      backendRefs:
+        - name: app-b-api
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app-b
+  namespace: app-b
+spec:
+  parentRefs:
+    - name: platform
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - app-b.example.com
+  rules:
+    - backendRefs:
+        - name: app-b-reporting
+          port: 80
+---
+# GitHub calls the proposals webhook directly (no browser, no Google login); the reporting service
+# verifies the HMAC signature itself, so this one path gets its own route under an allow policy.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app-b-webhook
+  namespace: app-b
+spec:
+  parentRefs:
+    - name: platform
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - app-b.example.com
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /v1/proposals/github-webhook
+      backendRefs:
+        - name: app-b-reporting
+          port: 80
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: app-b-webhook-own-auth
+  namespace: app-b
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: app-b-webhook
+  authorization:
+    defaultAction: Allow
+---
+# The ingestion API is called by the client SDK with a bearer token it validates itself, not by a
+# browser, so a Google login cannot sit in front of it: this route-level policy replaces the
+# Gateway-wide one for the API route (same pattern as apps/app-a/base/securitypolicy.yaml).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: app-b-api-own-auth
+  namespace: app-b
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: app-b-api
+  authorization:
+    defaultAction: Allow
+---
+# The dashboard: Gateway login plus an account allow-list, layered on the Gateway-wide policy
+# (mergeType), so oauth2-proxy authenticates and only the listed accounts (patched per
+# environment) get past the 403. Same pattern as pgAdmin (apps/app-a/base/pgadmin-access.yaml).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: app-b-allowlist
+  namespace: app-b
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: app-b
+  mergeType: StrategicMerge
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: allowed-accounts
+        action: Allow
+        principal:
+          headers:
+            - name: x-auth-request-email
+              values:
+                - admin@example.com   # patched per environment
+---
+# The only way in is the Gateway: admit the Envoy proxy pods of the platform Gateway and nothing
+# else inside the cluster. Kubelet probes are node traffic and not subject to NetworkPolicy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-b
+  namespace: app-b
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [app-b-api, app-b-reporting]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: envoy-gateway-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: proxy
+              app.kubernetes.io/managed-by: envoy-gateway
+      ports:
+        - protocol: TCP
+          port: 8000

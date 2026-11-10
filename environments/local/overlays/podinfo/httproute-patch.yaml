@@ -1,0 +1,4 @@
+- op: replace
+  path: /spec/hostnames
+  value:
+    - podinfo.local.azure.example.com

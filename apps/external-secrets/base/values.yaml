@@ -1,0 +1,12 @@
+# Base Helm values for External Secrets Operator. Keep environment tuning in the env overlay.
+installCRDs: true
+replicaCount: 1
+leaderElect: false
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+webhook:
+  replicaCount: 1
+certController:
+  replicaCount: 1

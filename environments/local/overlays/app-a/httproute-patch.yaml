@@ -1,0 +1,4 @@
+- op: replace
+  path: /spec/hostnames
+  value:
+    - app-a.local.azure.example.com

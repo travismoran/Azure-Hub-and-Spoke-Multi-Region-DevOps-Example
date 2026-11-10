@@ -1,0 +1,17 @@
+# stage: ClusterSecretStore for kv-demo-stage + Argo CD's Google OAuth secret.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../../../apps/external-secrets-config/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: stage
+
+patches:
+  - path: store-patch.yaml
+    target:
+      kind: ClusterSecretStore
+      name: azure-kv

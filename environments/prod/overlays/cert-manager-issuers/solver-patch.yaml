@@ -1,0 +1,6 @@
+- op: replace
+  path: /spec/acme/solvers/0/dns01/azureDNS/hostedZoneName
+  value: prod.azure.example.com
+- op: replace
+  path: /spec/acme/solvers/0/dns01/azureDNS/managedIdentity/clientID
+  value: REPLACE_WITH_CLIENT_ID_OF_id-cert-manager-demo-prod-wus3

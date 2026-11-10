@@ -1,0 +1,35 @@
+# local overlay for the App A blueprint: hostname, public origin, and the image from the
+# environment's registry crdemolocal.azurecr.io (infra repo live/dev/local/local-cluster).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: app-a
+
+resources:
+  - ../../../../apps/app-a/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: local
+
+images:
+  - name: example.azurecr.io/app-a
+    newName: crdemolocal.azurecr.io/app-a
+    # Deploying a build = bumping this to the sha-<short> the app-a ci run published.
+    newTag: sha-0000000
+
+patches:
+  - path: httproute-patch.yaml
+    target:
+      kind: HTTPRoute
+      name: app-a
+  - path: deployment-patch.yaml
+  - path: pgadmin-httproute-patch.yaml
+    target:
+      kind: HTTPRoute
+      name: pgadmin
+  - path: pgadmin-securitypolicy-patch.yaml
+    target:
+      kind: SecurityPolicy
+      name: pgadmin-allowlist
+  - path: pgadmin-patch.yaml

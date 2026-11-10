@@ -1,0 +1,19 @@
+# local: the Envoy proxy pods (and oauth2-proxy) live in the k3s pod range; the dashboard's
+# first admin is the same account the Gateway allow-list admits.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-b-reporting
+  namespace: app-b
+spec:
+  template:
+    spec:
+      containers:
+        - name: reporting
+          env:
+            - name: TRUSTED_PROXY_CIDRS
+              value: "10.42.0.0/16"
+            - name: ADMIN_EMAILS
+              value: "admin@example.com"
+            - name: PUBLIC_BASE_URL
+              value: "https://app-b.local.azure.example.com"

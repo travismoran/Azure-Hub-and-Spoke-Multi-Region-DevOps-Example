@@ -1,0 +1,9 @@
+# Replace with the public half of your local signing keypair (JWKS); the private key stays with
+# whoever mints the tokens the client sends and is never deployed. Empty = every token rejected.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-b-jwks
+  namespace: app-b
+data:
+  jwks.json: '{"keys": []}'   # REPLACE with your public JWKS

@@ -1,0 +1,4 @@
+- op: replace
+  path: /spec/hostnames
+  value:
+    - argocd.prod.azure.example.com

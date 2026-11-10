@@ -1,0 +1,4 @@
+- op: replace
+  path: /spec/hostnames
+  value:
+    - pgadmin.local.azure.example.com

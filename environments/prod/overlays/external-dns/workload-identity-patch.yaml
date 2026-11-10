@@ -1,0 +1,20 @@
+# Azure workload identity: the webhook injects a federated token into pods carrying this label,
+# and the identity is selected by the service account's client-id annotation.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-dns
+  namespace: external-dns
+  annotations:
+    azure.workload.identity/client-id: REPLACE_WITH_CLIENT_ID_OF_id-external-dns-demo-prod-wus3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: external-dns
+  namespace: external-dns
+spec:
+  template:
+    metadata:
+      labels:
+        azure.workload.identity/use: "true"

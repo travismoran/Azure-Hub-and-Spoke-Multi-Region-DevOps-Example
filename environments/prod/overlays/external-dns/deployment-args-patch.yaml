@@ -1,0 +1,7 @@
+# Only manage records inside this environment's zone, and own them as "prod".
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --domain-filter=prod.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --txt-owner-id=prod

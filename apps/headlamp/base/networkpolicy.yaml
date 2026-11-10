@@ -1,0 +1,28 @@
+# Headlamp authenticates nobody itself (see values.yaml), so the only path to it must be the
+# Gateway, where oauth2-proxy enforces the Google login. This admits the Envoy proxy pods of the
+# platform Gateway and nothing else inside the cluster. Kubelet probes are node traffic and are not
+# subject to NetworkPolicy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: headlamp
+      app.kubernetes.io/instance: headlamp
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: envoy-gateway-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: proxy
+              app.kubernetes.io/managed-by: envoy-gateway
+      ports:
+        - protocol: TCP
+          port: 4466

@@ -1,0 +1,26 @@
+# The only way in is the Gateway (TLS; the app does its own login): admit the Envoy
+# proxy pods of the platform Gateway and nothing else inside the cluster. Kubelet probes are node
+# traffic and are not subject to NetworkPolicy. Egress stays open (Google JWKS for ID-token checks).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-a
+  namespace: app-a
+spec:
+  podSelector:
+    matchLabels:
+      app: app-a
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: envoy-gateway-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: proxy
+              app.kubernetes.io/managed-by: envoy-gateway
+      ports:
+        - protocol: TCP
+          port: 3000

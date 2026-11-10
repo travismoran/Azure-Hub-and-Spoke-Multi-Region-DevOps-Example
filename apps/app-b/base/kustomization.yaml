@@ -1,0 +1,37 @@
+# Blueprint: App B, a sample telemetry service (your-org/app-b). Two services from the
+# same repo: the ingestion API (api.yaml) and the reporting API + dashboard SPA (reporting.yaml),
+# both one replica, sharing a CloudNativePG PostgreSQL cluster in the namespace
+# (postgres-cluster.yaml; needs the cloudnative-pg app). One hostname on the platform Gateway
+# (access.yaml): /v1/telemetry goes to the ingestion API, which validates its callers' bearer JWTs
+# itself against the public JWKS in the ConfigMap app-b-jwks and therefore opts out of the
+# Gateway login; every other path is the dashboard, behind the Gateway login plus an account
+# allow-list. Hostname, allow-list, JWKS, registry and image tags are patched per environment:
+# the images live in the environment's Azure Container Registry (cr<prefix><env>.azurecr.io/
+# app-b/{api,reporting}), pushed by the app-b repo's ci workflow through GitHub OIDC,
+# pulled with the token in externalsecret-acr.yaml.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: app-b
+
+resources:
+  - namespace.yaml
+  - externalsecret-acr.yaml
+  - postgres-cluster.yaml
+  - jwks.yaml
+  - api.yaml
+  - reporting.yaml
+  - access.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/name: app-b
+      app.kubernetes.io/part-of: platform
+
+images:
+  # Placeholder registry; each environment overlay sets newName to its own ACR and newTag to the
+  # build it runs (the app-b ci workflow publishes sha-<short> and main on every push to main).
+  - name: example.azurecr.io/app-b/api
+    newTag: sha-0000000
+  - name: example.azurecr.io/app-b/reporting
+    newTag: sha-0000000

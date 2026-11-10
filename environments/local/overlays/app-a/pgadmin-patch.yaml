@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: app-a
+spec:
+  template:
+    spec:
+      containers:
+        - name: pgadmin
+          env:
+            - name: PGADMIN_WEBSERVER_USER
+              value: admin@example.com
+            # Rancher Desktop (k3s) pod CIDR: the Envoy proxy pods' addresses.
+            - name: PGADMIN_CONFIG_WEBSERVER_TRUSTED_PROXIES
+              value: "['10.42.0.0/16']"

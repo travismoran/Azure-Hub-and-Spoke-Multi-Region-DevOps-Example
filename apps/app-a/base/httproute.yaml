@@ -1,0 +1,18 @@
+# App A UI + API. securitypolicy.yaml exempts this route from the Gateway-wide login; the app's
+# own Google sign-in + ALLOWED_EMAILS control access. Hostname patched per environment.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app-a
+  namespace: app-a
+spec:
+  parentRefs:
+    - name: platform
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - app-a.example.com
+  rules:
+    - backendRefs:
+        - name: app-a
+          port: 80

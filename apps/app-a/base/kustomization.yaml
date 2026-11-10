@@ -1,0 +1,39 @@
+# Blueprint: App A, a sample web app (your-org/app-a). One replica backed by a
+# CloudNativePG PostgreSQL cluster in the same namespace (postgres-cluster.yaml; needs the
+# cloudnative-pg app), published on the platform Gateway. The Gateway-wide
+# Google login (apps/oauth2-proxy) applies; inside it the app runs its own Google sign-in
+# (AUTH_MODE=google) against the environment's Google OAuth client, and opts out of the Gateway
+# login (securitypolicy.yaml) so there is one sign-in, not two; ALLOWED_EMAILS restricts access. Hostname, PUBLIC_ORIGIN,
+# the registry and the image tag are patched per environment: the image lives in the
+# environment's Azure Container Registry (cr<prefix><env>.azurecr.io/app-a), pushed by the
+# app-a repo's ci workflow through GitHub OIDC, pulled with the token in externalsecret-acr.yaml.
+# pgadmin.yaml / pgadmin-access.yaml add pgAdmin for the database behind the Gateway login plus an
+# account allow-list (both patched per environment).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: app-a
+
+resources:
+  - namespace.yaml
+  - externalsecret-acr.yaml
+  - externalsecret.yaml
+  - postgres-cluster.yaml
+  - deployment.yaml
+  - service.yaml
+  - httproute.yaml
+  - securitypolicy.yaml
+  - networkpolicy.yaml
+  - pgadmin.yaml
+  - pgadmin-access.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/name: app-a
+      app.kubernetes.io/part-of: platform
+
+images:
+  # Placeholder registry; each environment overlay sets newName to its own ACR and newTag to the
+  # build it runs (the app-a ci workflow publishes sha-<short> and master on every push to master).
+  - name: example.azurecr.io/app-a
+    newTag: sha-0000000

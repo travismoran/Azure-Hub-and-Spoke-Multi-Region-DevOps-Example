@@ -1,0 +1,17 @@
+# local overlay for the Headlamp blueprint: hostname only.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../../../apps/headlamp/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: local
+
+patches:
+  - path: httproute-patch.yaml
+    target:
+      kind: HTTPRoute
+      name: headlamp

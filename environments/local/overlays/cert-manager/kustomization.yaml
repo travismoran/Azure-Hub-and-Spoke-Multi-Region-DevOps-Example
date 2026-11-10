@@ -1,0 +1,15 @@
+# local overlay for the cert-manager blueprint (patches the Helm-rendered output).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: cert-manager
+
+resources:
+  - ../../../../apps/cert-manager/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: local
+
+patches:
+  - path: replicas-patch.yaml

@@ -1,0 +1,15 @@
+# stage: External Secrets Operator.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: external-secrets
+
+resources:
+  - ../../../../apps/external-secrets/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: stage
+
+patches:
+  - path: workload-identity-patch.yaml

@@ -1,0 +1,30 @@
+# One Gateway per cluster. Every app attaches an HTTPRoute (parentRef platform/gateway) with a host
+# under the environment's zone; TLS terminates here with the wildcard certificate below. Hostnames
+# are patched per environment.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: platform
+  namespace: gateway
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.example.com"
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.example.com"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: All

@@ -1,0 +1,10 @@
+# dev: one session cookie for every host under dev.azure.example.com; Google redirects back to auth.dev.azure.example.com.
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --cookie-domain=.dev.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --whitelist-domain=.dev.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --redirect-url=https://auth.dev.azure.example.com/oauth2/callback

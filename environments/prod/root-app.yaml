@@ -1,0 +1,26 @@
+# prod root App-of-Apps. Applied once by scripts/bootstrap.sh; after that every
+# Application under environments/prod/apps/ is reconciled from Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    environment: prod
+spec:
+  project: platform
+  source:
+    repoURL: git@github.com:your-org/Azure-Hub-and-Spoke-Multi-Region-DevOps-Example.git
+    targetRevision: main
+    path: environments/prod/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

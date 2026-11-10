@@ -1,0 +1,43 @@
+# AppProjects are part of the install so they exist before the root app refers to them.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  # Keep the project when the Argo CD app is deleted; apps hold the real finalizers.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Cluster platform components (Argo CD itself, cert-manager, ingress, observability)
+  sourceRepos:
+    - git@github.com:your-org/Azure-Hub-and-Spoke-Multi-Region-DevOps-Example.git
+    - https://github.com/your-org/Azure-Hub-and-Spoke-Multi-Region-DevOps-Example.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: workloads
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Application workloads (namespaced resources only)
+  sourceRepos:
+    - git@github.com:your-org/Azure-Hub-and-Spoke-Multi-Region-DevOps-Example.git
+    - https://github.com/your-org/Azure-Hub-and-Spoke-Multi-Region-DevOps-Example.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  # Workloads may create their own namespace but no other cluster-scoped resources.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: ResourceQuota
+    - group: ""
+      kind: LimitRange

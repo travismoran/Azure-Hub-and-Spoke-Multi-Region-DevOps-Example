@@ -1,0 +1,6 @@
+# kustomize --enable-helm pulls charts next to the kustomization
+**/charts/
+# never commit cluster credentials
+*.key
+*.pem
+id_*

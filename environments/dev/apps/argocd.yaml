@@ -1,0 +1,43 @@
+# Argo CD manages its own install so config drift and upgrades flow through Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    repoURL: git@github.com:your-org/Azure-Hub-and-Spoke-Multi-Region-DevOps-Example.git
+    targetRevision: main
+    path: environments/dev/argocd-install
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # Argo CD CRDs exceed the client-side apply annotation limit.
+      - ServerSideApply=true
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
+  ignoreDifferences:
+    # Populated at runtime by Argo CD itself (admin password, server keys, redis auth).
+    - kind: Secret
+      name: argocd-secret
+      jsonPointers:
+        - /data
+    - kind: Secret
+      name: argocd-redis
+      jsonPointers:
+        - /data

@@ -1,0 +1,12 @@
+# local: CloudNativePG operator.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: cnpg-system
+
+resources:
+  - ../../../../apps/cloudnative-pg/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: local

@@ -1,0 +1,7 @@
+# local: the environment's Key Vault (kv-demo-local, service principal sp-eso-local).
+- op: replace
+  path: /spec/provider/azurekv/tenantId
+  value: REPLACE_WITH_TENANT_ID
+- op: replace
+  path: /spec/provider/azurekv/vaultUrl
+  value: https://kv-demo-local.vault.azure.net

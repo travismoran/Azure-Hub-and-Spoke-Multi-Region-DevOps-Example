@@ -1,0 +1,205 @@
+# pgAdmin for the app-a-db cluster. Access is two layers deep: the Gateway-wide oauth2-proxy
+# Google login applies to the route, and pgadmin-access.yaml adds an allow-list of accounts on
+# top of it (that SecurityPolicy merges with the Gateway one instead of replacing it). pgAdmin
+# itself does no login of its own: it trusts the X-Auth-Request-Email header oauth2-proxy sets on
+# the authorised request ("webserver" authentication), only when the request comes from the Envoy
+# proxy pods (trusted-proxy CIDR, overlay) and only for a user that already exists in pgAdmin -
+# bootstrap.sh creates exactly one (PGADMIN_WEBSERVER_USER, overlay) on first start and registers
+# app-a-db for it with a pgpass file built from the CloudNativePG app secret, so no database
+# password is typed into, saved by or stored in pgAdmin.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin
+  namespace: app-a
+data:
+  servers.json: |
+    {
+      "Servers": {
+        "1": {
+          "Name": "app-a-db",
+          "Group": "App A",
+          "Host": "app-a-db-rw",
+          "Port": 5432,
+          "MaintenanceDB": "app-a",
+          "Username": "app-a",
+          "SSLMode": "require",
+          "PassFile": "/.pgpass"
+        }
+      }
+    }
+  bootstrap.sh: |
+    #!/usr/bin/env bash
+    # First start (empty volume): create pgAdmin's configuration database the way the image's
+    # entrypoint does, then the single webserver-authenticated user and its server list. Every
+    # start: refresh that user's pgpass from the CloudNativePG app secret. Then hand over to the
+    # stock entrypoint, which skips its own setup because the database exists, writes
+    # config_distro.py from the PGADMIN_CONFIG_* variables and starts gunicorn.
+    set -euo pipefail
+    : "${PGADMIN_WEBSERVER_USER:?the Google account allowed into pgAdmin}"
+    DATA=/var/lib/pgadmin
+    USER_DIR="$DATA/storage/${PGADMIN_WEBSERVER_USER//@/_}"   # pgAdmin's per-user storage dir
+
+    if [[ ! -f $DATA/pgadmin4.db ]]; then
+      # The entrypoint has not written config_distro.py yet (it would log to /var/log/pgadmin,
+      # unwritable as non-root); give setup a minimal one and empty it again afterwards so the
+      # entrypoint generates the real one.
+      echo "LOG_FILE = '/dev/null'" > /pgadmin4/config_distro.py
+      # Setup insists on an internal administrator. It can never log in (AUTHENTICATION_SOURCES
+      # has no 'internal') and its random password is discarded.
+      export PGADMIN_SETUP_EMAIL="${PGADMIN_BOOTSTRAP_ADMIN:-pgadmin-bootstrap@example.com}"
+      PGADMIN_SETUP_PASSWORD="$(/venv/bin/python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+      export PGADMIN_SETUP_PASSWORD
+      (cd /pgadmin4 && /venv/bin/python3 run_pgadmin.py)
+      unset PGADMIN_SETUP_PASSWORD
+      /venv/bin/python3 /pgadmin4/setup.py add-external-user "$PGADMIN_WEBSERVER_USER" \
+        --auth-source webserver --email "$PGADMIN_WEBSERVER_USER" --role Administrator
+      /venv/bin/python3 /pgadmin4/setup.py load-servers /config/servers.json \
+        --user "$PGADMIN_WEBSERVER_USER" --auth-source webserver
+      : > /pgadmin4/config_distro.py
+    fi
+
+    mkdir -p "$USER_DIR"
+    cp /secrets/pgpass "$USER_DIR/.pgpass"   # libpq ignores a pgpass that is readable by others
+    chmod 0600 "$USER_DIR/.pgpass"
+
+    exec /entrypoint.sh
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pgadmin-data
+  namespace: app-a
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: app-a
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # the configuration database lives on one ReadWriteOnce volume
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 5050    # "pgadmin" in the image
+        runAsGroup: 5050
+        fsGroup: 5050      # the volume is writable by that user
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: pgadmin
+          image: docker.io/dpage/pgadmin4:9.19
+          command: ["/bin/bash", "/config/bootstrap.sh"]
+          ports:
+            - name: http
+              containerPort: 5050
+          env:
+            - name: PGADMIN_LISTEN_PORT
+              value: "5050"
+            # IPv4 only: on the default [::] socket peers appear as ::ffff:10.x.x.x, which never
+            # matches the IPv4 trusted-proxy CIDR below.
+            - name: PGADMIN_LISTEN_ADDRESS
+              value: 0.0.0.0
+            - name: PGADMIN_DISABLE_POSTFIX
+              value: "1"
+            # The one account pgAdmin knows (created on first start, Administrator). Must be the
+            # same address the SecurityPolicy in pgadmin-access.yaml allows. Set per environment.
+            - name: PGADMIN_WEBSERVER_USER
+              value: admin@example.com
+            # Everything below is written to config_distro.py by the image's entrypoint
+            # (Python literals). Identity = the X-Auth-Request-Email header from oauth2-proxy ...
+            - name: PGADMIN_CONFIG_AUTHENTICATION_SOURCES
+              value: "['webserver']"
+            - name: PGADMIN_CONFIG_WEBSERVER_REMOTE_USER
+              value: "'HTTP_X_AUTH_REQUEST_EMAIL'"
+            - name: PGADMIN_CONFIG_WEBSERVER_REMOTE_USER_FROM_HEADER
+              value: "True"
+            # ... accepted only from these peer addresses: the environment's pod CIDR, i.e. the
+            # Envoy proxy pods (the NetworkPolicy admits no other pod). Empty = nobody can log in.
+            - name: PGADMIN_CONFIG_WEBSERVER_TRUSTED_PROXIES
+              value: "[]"
+            # ... and only for a user that already exists.
+            - name: PGADMIN_CONFIG_WEBSERVER_AUTO_CREATE_USER
+              value: "False"
+            # Credentials come from the pgpass file; pgAdmin stores none, so no master password.
+            - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
+              value: "False"
+            - name: PGADMIN_CONFIG_ALLOW_SAVE_PASSWORD
+              value: "False"
+            - name: PGADMIN_CONFIG_SESSION_COOKIE_SECURE
+              value: "True"
+            - name: PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED
+              value: "False"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/pgadmin
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: pgpass
+              mountPath: /secrets
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /misc/ping
+              port: http
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /misc/ping
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          # No readOnlyRootFilesystem: the entrypoint writes /pgadmin4/config_distro.py on every start.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: pgadmin-data
+        - name: config
+          configMap:
+            name: pgadmin
+        - name: pgpass
+          secret:
+            secretName: app-a-db-app   # written by CloudNativePG (postgres-cluster.yaml)
+            items:
+              - key: pgpass
+                path: pgpass
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin
+  namespace: app-a
+spec:
+  selector:
+    app: pgadmin
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

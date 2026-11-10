@@ -1,0 +1,7 @@
+# Only manage records inside this environment's zone, and own them as "dev".
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --domain-filter=dev.azure.example.com
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --txt-owner-id=dev

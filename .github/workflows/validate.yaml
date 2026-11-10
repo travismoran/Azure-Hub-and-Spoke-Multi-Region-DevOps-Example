@@ -1,0 +1,28 @@
+name: validate
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  KUSTOMIZE_VERSION: v5.8.3
+  HELM_VERSION: v3.22.1
+  KUBECONFORM_VERSION: v0.8.0
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kustomize, helm 3, kubeconform
+        run: |
+          set -euo pipefail
+          curl -sSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin kustomize
+          curl -sSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin --strip-components=1 linux-amd64/helm
+          sudo mv /usr/local/bin/helm /usr/local/bin/helm3
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+      - name: Render and validate every environment
+        run: scripts/validate.sh

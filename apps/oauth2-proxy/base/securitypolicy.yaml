@@ -1,0 +1,14 @@
+# oauth2-proxy's own route must stay reachable without a session (login start, Google callback,
+# sign-out). A route-level policy replaces the Gateway-level one entirely, so this disables auth here.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oauth2-proxy-public
+  namespace: gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: oauth2-proxy
+  authorization:
+    defaultAction: Allow

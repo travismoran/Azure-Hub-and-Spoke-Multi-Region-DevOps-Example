@@ -1,0 +1,23 @@
+# local: ExternalDNS scoped to the local.azure.example.com zone.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: external-dns
+
+resources:
+  - ../../../../apps/external-dns/base
+  - externalsecret.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: local
+
+patches:
+  - path: deployment-args-patch.yaml
+    target:
+      kind: Deployment
+      name: external-dns
+
+# The azure-config-file secret holds the sp-dns-local client secret. The principal is
+# Terraform-managed in the infra repo (live/platform/dns-principals); the secret is copied
+# from its outputs into Key Vault and synced into the cluster by External Secrets. Never committed.

@@ -1,0 +1,16 @@
+# prod: Let's Encrypt issuers solving DNS-01 in prod.azure.example.com.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../../../apps/cert-manager-issuers/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: prod
+
+patches:
+  - path: solver-patch.yaml
+    target:
+      kind: ClusterIssuer

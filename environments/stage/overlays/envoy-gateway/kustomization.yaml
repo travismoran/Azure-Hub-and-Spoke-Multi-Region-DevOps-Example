@@ -1,0 +1,12 @@
+# stage: Envoy Gateway controller.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: envoy-gateway-system
+
+resources:
+  - ../../../../apps/envoy-gateway/base
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: stage

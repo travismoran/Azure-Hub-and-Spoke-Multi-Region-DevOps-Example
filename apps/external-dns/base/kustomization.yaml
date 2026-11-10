@@ -1,0 +1,19 @@
+# Blueprint: ExternalDNS (Azure DNS provider) rendered from the kubernetes-sigs Helm chart.
+# Environment overlays add --domain-filter / --txt-owner-id and the Azure credential model:
+#   * Azure clusters: workload identity (azure.json has no secret; it is generated from Git)
+#   * local clusters: service principal (azure.json is a Key Vault secret written by the infra repo's
+#     Terraform and synced in by External Secrets; never committed)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: external-dns
+
+resources:
+  - namespace.yaml
+
+helmCharts:
+  - name: external-dns
+    repo: https://kubernetes-sigs.github.io/external-dns/
+    version: 1.23.0
+    releaseName: external-dns
+    namespace: external-dns
+    valuesFile: values.yaml

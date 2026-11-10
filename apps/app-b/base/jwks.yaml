@@ -1,0 +1,11 @@
+# Public signing keys the ingestion API accepts bearer tokens from (AUTH_MODE=dev: RS256, JWKS
+# file). Public material only, so it lives in Git; each environment replaces the empty set with its
+# own JWKS (api/scripts/gen_jwks.py in the app-b repo; the private half stays with whoever
+# mints tokens and is never deployed). An empty key set rejects every token.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-b-jwks
+  namespace: app-b
+data:
+  jwks.json: '{"keys": []}'

@@ -1,0 +1,12 @@
+# local: Argo CD install = core base + this environment's config.
+# Applied once by scripts/bootstrap.sh, then self-managed by the "argocd" Application.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+
+resources:
+  - ../../../core/argocd
+
+patches:
+  - path: argocd-cm.yaml
+  - path: argocd-cmd-params-cm.yaml

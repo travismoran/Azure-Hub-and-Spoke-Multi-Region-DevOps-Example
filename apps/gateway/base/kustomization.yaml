@@ -1,0 +1,14 @@
+# Blueprint: the cluster's shared Gateway (Envoy), wildcard TLS and http->https redirect.
+# No namespace transformer here: argocd-route.yaml must land in the argocd namespace, the rest set
+# namespace: gateway explicitly.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - gatewayclass.yaml
+  - gateway.yaml
+  - certificate.yaml
+  - https-redirect.yaml
+  - clienttrafficpolicy.yaml
+  - argocd-route.yaml

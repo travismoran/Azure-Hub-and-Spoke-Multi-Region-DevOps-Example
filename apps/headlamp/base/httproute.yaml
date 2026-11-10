@@ -1,0 +1,18 @@
+# Headlamp UI. The Gateway-wide SecurityPolicy (apps/oauth2-proxy) applies, so only example.com
+# Google accounts reach it. Hostname patched per environment.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  parentRefs:
+    - name: platform
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - headlamp.example.com
+  rules:
+    - backendRefs:
+        - name: headlamp
+          port: 80
